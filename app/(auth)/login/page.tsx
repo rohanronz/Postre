@@ -32,8 +32,7 @@ function LoginPageContent() {
       return;
     }
 
-    router.refresh();
-    router.replace(redirectTo);
+    router.push(redirectTo);
   };
 
   return (
