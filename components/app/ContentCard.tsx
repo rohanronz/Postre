@@ -7,9 +7,15 @@ import { cn } from "@/lib/utils";
 
 type Platform = "linkedin" | "twitter" | "facebook" | "newsletter" | "blog";
 
+type BlogContent = {
+  summary?: string;
+  keyTakeaways?: string[];
+  metaDescription?: string;
+};
+
 interface ContentCardProps {
   platform: Platform;
-  content: string | string[] | { subject?: string; body?: string; summary?: string; keyTakeaways?: string[]; metaDescription?: string };
+  content: string | string[] | { subject?: string; body?: string } | BlogContent;
   delay?: number;
 }
 
@@ -68,10 +74,11 @@ export default function ContentCard({ platform, content, delay = 0 }: ContentCar
       return `Subject: ${newsletter.subject || ""}\n\n${newsletter.body || ""}`;
     }
     if (platform === "blog" && typeof content === "object") {
-      const blog = content as { summary?: string; keyTakeaways?: string[]; metaDescription?: string };
+      const blog = content as BlogContent;
+      const keyTakeaways = blog.keyTakeaways ?? [];
       let text = blog.summary || "";
-      if (blog.keyTakeaways?.length) {
-        text += "\n\nKey Takeaways:\n" + blog.keyTakeaways.map((t) => `• ${t}`).join("\n");
+      if (keyTakeaways.length) {
+        text += "\n\nKey Takeaways:\n" + keyTakeaways.map((t) => `• ${t}`).join("\n");
       }
       if (blog.metaDescription) {
         text += `\n\nMeta Description: ${blog.metaDescription}`;
@@ -146,13 +153,18 @@ export default function ContentCard({ platform, content, delay = 0 }: ContentCar
         ) : platform === "blog" && typeof content === "object" ? (
           <div className="space-y-4">
             <p className="text-gray-700 leading-relaxed dark:text-gray-300">
-              {(content as { summary?: string }).summary}
+              {(content as BlogContent).summary}
             </p>
-            {(content as { keyTakeaways?: string[] }).keyTakeaways?.length > 0 && (
+            {(() => {
+              const keyTakeaways = (content as BlogContent).keyTakeaways ?? [];
+              if (!keyTakeaways.length) {
+                return null;
+              }
+              return (
               <div>
                 <h4 className="text-sm font-medium text-gray-900 mb-2 dark:text-white">Key Takeaways</h4>
                 <ul className="space-y-1">
-                  {(content as { keyTakeaways?: string[] }).keyTakeaways?.map((takeaway, i) => (
+                  {keyTakeaways.map((takeaway, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <span className="text-green-500">•</span>
                       {takeaway}
@@ -160,12 +172,13 @@ export default function ContentCard({ platform, content, delay = 0 }: ContentCar
                   ))}
                 </ul>
               </div>
-            )}
-            {(content as { metaDescription?: string }).metaDescription && (
+              );
+            })()}
+            {(content as BlogContent).metaDescription && (
               <div className="p-3 bg-green-50 rounded-lg dark:bg-green-900/20">
                 <span className="text-xs text-green-600 mb-1 block">Meta Description</span>
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {(content as { metaDescription?: string }).metaDescription}
+                  {(content as BlogContent).metaDescription}
                 </p>
               </div>
             )}
