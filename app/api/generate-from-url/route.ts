@@ -160,11 +160,17 @@ Please generate engaging social media content for all platforms as specified. Re
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: userPrompt },
           ],
-          response_format: { type: "json_object" },
+          responseFormat: { type: "json_object" },
           temperature: 0.7,
         });
 
-        const responseText = completion.choices[0]?.message?.content;
+        const rawContent = completion.choices[0]?.message?.content;
+        const responseText =
+          typeof rawContent === "string"
+            ? rawContent
+            : Array.isArray(rawContent)
+              ? (rawContent.find((c) => c && typeof c === "object" && "text" in c) as { text?: string } | undefined)?.text ?? ""
+              : "";
         if (!responseText) {
           send({ stage: "error", error: "No response from AI" });
           controller.close();
