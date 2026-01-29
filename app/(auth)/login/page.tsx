@@ -37,8 +37,12 @@ function LoginPageContent() {
   };
 
   const handleDemoLogin = () => {
-    document.cookie = "postre_demo=1; path=/; max-age=86400";
-    router.replace("/app");
+    const isSecure = typeof window !== "undefined" && window.location?.protocol === "https:";
+    let cookie = "postre_demo=1; path=/; max-age=86400; SameSite=Lax";
+    if (isSecure) cookie += "; Secure";
+    document.cookie = cookie;
+    // Full page redirect so the new cookie is sent with the request (fixes deployment)
+    window.location.href = "/app";
   };
 
   return (
