@@ -36,6 +36,32 @@ function LoginPageContent() {
     router.replace(redirectTo);
   };
 
+  const handleDemoLogin = async () => {
+    const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL?.trim();
+    const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD?.trim();
+    if (!demoEmail || !demoPassword) {
+      setError("Demo login is not configured");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: demoEmail,
+      password: demoPassword,
+    });
+    if (signInError) {
+      setError(signInError.message);
+      setIsLoading(false);
+      return;
+    }
+    router.refresh();
+    router.replace(redirectTo);
+  };
+
+  const hasDemoCredentials =
+    process.env.NEXT_PUBLIC_DEMO_EMAIL?.trim() && process.env.NEXT_PUBLIC_DEMO_PASSWORD?.trim();
+
   return (
     <div className="min-h-screen bg-white dark:bg-black relative overflow-hidden flex items-center justify-center px-4 py-16">
       <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400/20 rounded-full blur-[120px] mix-blend-multiply dark:bg-blue-900/20" />
@@ -113,6 +139,24 @@ function LoginPageContent() {
               >
                 {isLoading ? "Signing in..." : "Sign in"}
               </button>
+
+              {hasDemoCredentials && (
+                <>
+                  <div className="relative flex items-center justify-center">
+                    <span className="bg-white dark:bg-gray-900 px-2 text-xs text-gray-500 dark:text-gray-400">
+                      or
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDemoLogin}
+                    disabled={isLoading}
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-transparent py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-60"
+                  >
+                    Login as demo user
+                  </button>
+                </>
+              )}
             </form>
 
           <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">

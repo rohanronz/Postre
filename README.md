@@ -9,6 +9,8 @@ Create a `.env.local` file in the project root with:
 - **NEXT_PUBLIC_SUPABASE_URL** – Supabase project URL
 - **NEXT_PUBLIC_SUPABASE_ANON_KEY** – Supabase anonymous key
 - **FIRECRAWL_API_KEY** – Firecrawl API key (used for URL scraping)
+- **NEXT_PUBLIC_DEMO_EMAIL** – (Optional) Demo account email for "Login as demo user". Set in Vercel for deployment.
+- **NEXT_PUBLIC_DEMO_PASSWORD** – (Optional) Demo account password. Use a low-privilege Supabase user for trying the app.
 
 ## Getting Started
 
