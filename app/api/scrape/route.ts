@@ -26,10 +26,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Scrape the URL using Firecrawl
-    // SDK returns the data object directly
+    // Scrape the URL using Firecrawl (25s timeout to avoid hanging on slow pages)
     const result = await firecrawl.scrape(url, {
       formats: ["markdown"],
+      timeout: 25_000,
     });
 
     if (!result || !result.markdown) {

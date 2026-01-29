@@ -30,8 +30,11 @@ interface ScrapedMetadata {
   sourceURL?: string;
 }
 
+type GenerateStep = "scraping" | "generating";
+
 export default function AppClient() {
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<GenerateStep | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
   const [metadata, setMetadata] = useState<ScrapedMetadata | null>(null);
@@ -40,43 +43,62 @@ export default function AppClient() {
     setIsLoading(true);
     setError(null);
     setGeneratedContent(null);
+    setStep("scraping");
 
     try {
-      const scrapeResponse = await fetch("/api/scrape", {
+      const res = await fetch("/api/generate-from-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
 
-      const scrapeData = await scrapeResponse.json();
-
-      if (!scrapeResponse.ok) {
-        throw new Error(scrapeData.error || "Failed to scrape URL");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Request failed");
       }
 
-      setMetadata(scrapeData.data.metadata);
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
 
-      const generateResponse = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: scrapeData.data.markdown,
-          metadata: scrapeData.data.metadata,
-          prompt: url,
-        }),
-      });
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      const generateData = await generateResponse.json();
-
-      if (!generateResponse.ok) {
-        throw new Error(generateData.error || "Failed to generate content");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const payload = JSON.parse(line.slice(6)) as {
+              stage?: string;
+              error?: string;
+              data?: GeneratedContent;
+              metadata?: ScrapedMetadata;
+            };
+            if (payload.stage === "scraping") setStep("scraping");
+            else if (payload.stage === "generating") setStep("generating");
+            else if (payload.stage === "done") {
+              if (payload.data) setGeneratedContent(payload.data);
+              if (payload.metadata) setMetadata(payload.metadata);
+              setStep(null);
+            } else if (payload.stage === "error") {
+              throw new Error(payload.error ?? "Unknown error");
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) continue;
+            throw e;
+          }
+        }
       }
-
-      setGeneratedContent(generateData.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
+      setStep(null);
     } finally {
       setIsLoading(false);
+      setStep(null);
     }
   };
 
@@ -176,7 +198,18 @@ export default function AppClient() {
           </motion.div>
         )}
 
-        {isLoading && <LoadingSkeleton />}
+        {isLoading && (
+          <div className="mb-6">
+            <p className="text-center text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">
+              {step === "scraping"
+                ? "Scraping URL…"
+                : step === "generating"
+                  ? "Generating content…"
+                  : "Loading…"}
+            </p>
+            <LoadingSkeleton />
+          </div>
+        )}
 
         {generatedContent && !isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
