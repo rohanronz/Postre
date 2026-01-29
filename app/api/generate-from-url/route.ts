@@ -3,6 +3,7 @@ import Firecrawl from "@mendable/firecrawl-js";
 import { OpenRouter } from "@openrouter/sdk";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getCookieMapFromRequest } from "@/lib/cookie-from-request";
 import { parseLLMJson } from "@/lib/parse-llm-json";
 
 const firecrawl = new Firecrawl({
@@ -99,10 +100,11 @@ export async function POST(request: NextRequest) {
   }
 
   const cookieStore = await cookies();
+  const cookieMap = getCookieMapFromRequest(request);
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get(name) {
-        return request.cookies.get(name)?.value ?? cookieStore.get(name)?.value;
+        return request.cookies.get(name)?.value ?? cookieStore.get(name)?.value ?? cookieMap.get(name) ?? undefined;
       },
       set(name, value, options) {
         cookieStore.set({ name, value, ...options });
