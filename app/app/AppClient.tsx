@@ -48,6 +48,7 @@ export default function AppClient() {
     try {
       const res = await fetch("/api/generate-from-url", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
