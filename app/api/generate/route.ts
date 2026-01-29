@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import Groq from "groq-sdk";
+import { OpenRouter } from "@openrouter/sdk";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { parseLLMJson } from "@/lib/parse-llm-json";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY!,
+const openRouter = new OpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY!,
 });
 
 const SYSTEM_PROMPT = `You are an expert content repurposing specialist. Your task is to take blog post or article content and transform it into engaging social media posts for different platforms.
@@ -55,6 +56,14 @@ Return your response as a valid JSON object with the following structure:
   }
 }`;
 
+const CONTENT_MAX_LENGTH = 12_000;
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "meta-llama/Llama-3.3-70B-Instruct";
+
+function truncateContent(content: string): string {
+  if (content.length <= CONTENT_MAX_LENGTH) return content;
+  return content.slice(0, CONTENT_MAX_LENGTH) + "\n\n(Content truncated for length. Generate based on the above.)";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { content, metadata, prompt } = await request.json();
@@ -66,18 +75,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const truncatedContent = truncateContent(content);
+
     const userPrompt = `Here is the content to repurpose:
 
 Title: ${metadata?.title || "Untitled"}
 Description: ${metadata?.description || "No description"}
 
 Content:
-${content}
+${truncatedContent}
 
 Please generate engaging social media content for all platforms as specified. Return only valid JSON.`;
 
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+    const completion = await openRouter.chat.send({
+      model: OPENROUTER_MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
@@ -95,7 +106,7 @@ Please generate engaging social media content for all platforms as specified. Re
       );
     }
 
-    const generatedContent = JSON.parse(responseText);
+    const generatedContent = parseLLMJson(responseText);
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

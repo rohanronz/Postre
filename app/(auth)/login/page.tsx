@@ -15,6 +15,9 @@ function LoginPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL ?? "";
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "";
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
@@ -24,6 +27,32 @@ function LoginPageContent() {
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
+    });
+
+    if (signInError) {
+      setError(signInError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    router.refresh();
+    router.replace(redirectTo);
+  };
+
+  const handleDemoLogin = async () => {
+    setError(null);
+    setIsLoading(true);
+
+    if (!demoEmail || !demoPassword) {
+      setError("Demo login is not configured.");
+      setIsLoading(false);
+      return;
+    }
+
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: demoEmail,
+      password: demoPassword,
     });
 
     if (signInError) {
@@ -112,6 +141,19 @@ function LoginPageContent() {
                 className="w-full rounded-xl bg-blue-600 text-white py-3 text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60 shadow-lg shadow-blue-600/25"
               >
                 {isLoading ? "Signing in..." : "Sign in"}
+              </button>
+
+              <div className="relative flex items-center justify-center">
+                <span className="bg-white dark:bg-gray-900 px-2 text-xs text-gray-500 dark:text-gray-400">or</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDemoLogin}
+                disabled={isLoading}
+                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-transparent py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-60"
+              >
+                Login as demo user
               </button>
             </form>
 

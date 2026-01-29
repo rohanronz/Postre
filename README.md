@@ -1,5 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Environment variables
+
+Create a `.env.local` file in the project root with:
+
+- **OPENROUTER_API_KEY** – Your [OpenRouter](https://openrouter.ai) API key (used for content generation). Get one at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys).
+- **OPENROUTER_MODEL** – (Optional) OpenRouter model ID. Defaults to `meta-llama/Llama-3.3-70B-Instruct`. Use a smaller/faster model (e.g. an 8B or 32B variant on [OpenRouter models](https://openrouter.ai/models)) to reduce generation time at the cost of some quality.
+- **NEXT_PUBLIC_SUPABASE_URL** – Supabase project URL
+- **NEXT_PUBLIC_SUPABASE_ANON_KEY** – Supabase anonymous key
+- **FIRECRAWL_API_KEY** – Firecrawl API key (used for URL scraping)
+- **NEXT_PUBLIC_DEMO_EMAIL** and **NEXT_PUBLIC_DEMO_PASSWORD** – (Optional) Credentials for the "Login as demo user" button. Create a demo user in Supabase first, then set these so reviewers can try the app without signing up.
+
 ## Getting Started
 
 First, run the development server:
