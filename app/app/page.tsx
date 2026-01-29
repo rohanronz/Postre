@@ -5,8 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function AppPage() {
   const cookieStore = await cookies();
-  if (cookieStore.get("postre_demo")?.value === "1") {
-    return <AppClient />;
+  const isDemo = cookieStore.get("postre_demo")?.value === "1";
+  if (isDemo) {
+    return <AppClient isDemo={true} />;
   }
   const supabase = await createClient();
   const {
@@ -17,5 +18,5 @@ export default async function AppPage() {
     redirect("/login");
   }
 
-  return <AppClient />;
+  return <AppClient isDemo={false} />;
 }

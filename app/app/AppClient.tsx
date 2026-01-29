@@ -33,7 +33,11 @@ interface ScrapedMetadata {
 
 type GenerateStep = "scraping" | "generating";
 
-export default function AppClient() {
+interface AppClientProps {
+  isDemo?: boolean;
+}
+
+export default function AppClient({ isDemo = false }: AppClientProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<GenerateStep | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +56,9 @@ export default function AppClient() {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (session?.access_token) {
         headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      if (isDemo) {
+        headers["X-Postre-Demo"] = "1";
       }
       const res = await fetch("/api/generate-from-url", {
         method: "POST",

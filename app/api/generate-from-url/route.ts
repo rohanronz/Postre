@@ -94,7 +94,10 @@ export async function POST(request: NextRequest) {
   }
 
   const cookieMap = getCookieMapFromRequest(request);
-  const isDemo = request.cookies.get("postre_demo")?.value === "1" || cookieMap.get("postre_demo") === "1";
+  const isDemo =
+    request.cookies.get("postre_demo")?.value === "1" ||
+    cookieMap.get("postre_demo") === "1" ||
+    request.headers.get("X-Postre-Demo") === "1";
 
   let user: { id: string } | null = null;
   let supabase: ReturnType<typeof createServerClient> | null = null;
