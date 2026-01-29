@@ -15,9 +15,6 @@ function LoginPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL ?? "";
-  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "";
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
@@ -39,30 +36,9 @@ function LoginPageContent() {
     router.replace(redirectTo);
   };
 
-  const handleDemoLogin = async () => {
-    setError(null);
-    setIsLoading(true);
-
-    if (!demoEmail || !demoPassword) {
-      setError("Demo login is not configured.");
-      setIsLoading(false);
-      return;
-    }
-
-    const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: demoEmail,
-      password: demoPassword,
-    });
-
-    if (signInError) {
-      setError(signInError.message);
-      setIsLoading(false);
-      return;
-    }
-
-    router.refresh();
-    router.replace(redirectTo);
+  const handleDemoLogin = () => {
+    document.cookie = "postre_demo=1; path=/; max-age=86400";
+    router.replace("/app");
   };
 
   return (

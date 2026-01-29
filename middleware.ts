@@ -36,6 +36,17 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
   const isProtectedRoute = pathname.startsWith("/app") || pathname.startsWith("/history");
+  const isDemo = request.cookies.get("postre_demo")?.value === "1";
+
+  if (isDemo) {
+    if (isProtectedRoute) return response;
+    if (isAuthRoute) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/app";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
 
   if (!user && isProtectedRoute) {
     const redirectUrl = request.nextUrl.clone();

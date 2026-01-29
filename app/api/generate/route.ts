@@ -76,6 +76,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const cookieMap = getCookieMapFromRequest(request);
+    const isDemo = request.cookies.get("postre_demo")?.value === "1" || cookieMap.get("postre_demo") === "1";
+
     const truncatedContent = truncateContent(content);
 
     const userPrompt = `Here is the content to repurpose:
@@ -114,6 +117,13 @@ Please generate engaging social media content for all platforms as specified. Re
 
     const generatedContent = parseLLMJson(responseText);
 
+    if (isDemo) {
+      return NextResponse.json({
+        success: true,
+        data: generatedContent,
+      });
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -125,7 +135,6 @@ Please generate engaging social media content for all platforms as specified. Re
     }
 
     const cookieStore = await cookies();
-    const cookieMap = getCookieMapFromRequest(request);
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         get(name) {

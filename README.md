@@ -9,7 +9,6 @@ Create a `.env.local` file in the project root with:
 - **NEXT_PUBLIC_SUPABASE_URL** – Supabase project URL
 - **NEXT_PUBLIC_SUPABASE_ANON_KEY** – Supabase anonymous key
 - **FIRECRAWL_API_KEY** – Firecrawl API key (used for URL scraping)
-- **NEXT_PUBLIC_DEMO_EMAIL** and **NEXT_PUBLIC_DEMO_PASSWORD** – (Optional) Credentials for the "Login as demo user" button. Create a demo user in Supabase first, then set these so reviewers can try the app without signing up.
 
 ## Getting Started
 
