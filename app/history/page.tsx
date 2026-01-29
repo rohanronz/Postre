@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import HistoryClient from "./HistoryClient";
 
@@ -25,10 +24,6 @@ type HistoryItem = {
 };
 
 export default async function HistoryPage() {
-  const cookieStore = await cookies();
-  if (cookieStore.get("postre_demo")?.value === "1") {
-    return <HistoryClient items={[]} />;
-  }
   const supabase = await createClient();
   const {
     data: { user },

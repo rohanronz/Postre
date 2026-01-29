@@ -8,7 +8,6 @@ import URLForm from "@/components/app/URLForm";
 import ContentCard from "@/components/app/ContentCard";
 import LoadingSkeleton from "@/components/app/LoadingSkeleton";
 import LogoutButton from "@/components/auth/LogoutButton";
-import { createClient } from "@/lib/supabase/client";
 
 interface GeneratedContent {
   linkedin: string;
@@ -33,11 +32,7 @@ interface ScrapedMetadata {
 
 type GenerateStep = "scraping" | "generating";
 
-interface AppClientProps {
-  isDemo?: boolean;
-}
-
-export default function AppClient({ isDemo = false }: AppClientProps) {
+export default function AppClient() {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<GenerateStep | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,19 +46,9 @@ export default function AppClient({ isDemo = false }: AppClientProps) {
     setStep("scraping");
 
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
-      if (isDemo) {
-        headers["X-Postre-Demo"] = "1";
-      }
       const res = await fetch("/api/generate-from-url", {
         method: "POST",
-        credentials: "include",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
 

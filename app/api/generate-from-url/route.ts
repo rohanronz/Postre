@@ -3,8 +3,6 @@ import Firecrawl from "@mendable/firecrawl-js";
 import { OpenRouter } from "@openrouter/sdk";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { getCookieMapFromRequest } from "@/lib/cookie-from-request";
-import { parseLLMJson } from "@/lib/parse-llm-json";
 
 const firecrawl = new Firecrawl({
   apiKey: process.env.FIRECRAWL_API_KEY!,
@@ -93,47 +91,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
   }
 
-  const cookieMap = getCookieMapFromRequest(request);
-  const isDemo =
-    request.cookies.get("postre_demo")?.value === "1" ||
-    cookieMap.get("postre_demo") === "1" ||
-    request.headers.get("X-Postre-Demo") === "1";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  }
 
-  let user: { id: string } | null = null;
-  let supabase: ReturnType<typeof createServerClient> | null = null;
-
-  if (!isDemo) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
-    }
-    const cookieStore = await cookies();
-    supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        get(name) {
-          return request.cookies.get(name)?.value ?? cookieStore.get(name)?.value ?? cookieMap.get(name) ?? undefined;
-        },
-        set(name, value, options) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          cookieStore.set({ name, value: "", ...options });
-        },
+  const cookieStore = await cookies();
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name) {
+        return cookieStore.get(name)?.value;
       },
-    });
-    user = (await supabase.auth.getUser()).data.user ?? null;
-    if (!user) {
-      const authHeader = request.headers.get("Authorization");
-      const token = authHeader?.replace(/^Bearer\s+/i, "").trim();
-      if (token) {
-        const { data } = await supabase.auth.getUser(token);
-        user = data.user ?? null;
-      }
-    }
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+      set(name, value, options) {
+        cookieStore.set({ name, value, ...options });
+      },
+      remove(name, options) {
+        cookieStore.set({ name, value: "", ...options });
+      },
+    },
+  });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const stream = new ReadableStream({
@@ -177,41 +160,37 @@ Please generate engaging social media content for all platforms as specified. Re
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: userPrompt },
           ],
-          responseFormat: { type: "json_object" },
+          response_format: { type: "json_object" },
           temperature: 0.7,
         });
 
-        const rawContent = completion.choices[0]?.message?.content;
-        const responseText =
-          typeof rawContent === "string"
-            ? rawContent
-            : Array.isArray(rawContent)
-              ? (rawContent.find((c) => c && typeof c === "object" && "text" in c) as { text?: string } | undefined)?.text ?? ""
-              : "";
+        const responseText = completion.choices[0]?.message?.content;
         if (!responseText) {
           send({ stage: "error", error: "No response from AI" });
           controller.close();
           return;
         }
 
-        const generatedContent = parseLLMJson(responseText);
+        let jsonStr = responseText.trim();
+        if (jsonStr.startsWith("```")) {
+          jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+        }
+        const generatedContent = JSON.parse(jsonStr);
 
-        if (!isDemo && user && supabase) {
-          const { error: insertError } = await supabase
-            .from("generated_content")
-            .insert({
-              user_id: user.id,
-              prompt: url,
-              source_url: metadata?.sourceURL || null,
-              result: generatedContent,
-            });
+        const { error: insertError } = await supabase
+          .from("generated_content")
+          .insert({
+            user_id: user.id,
+            prompt: url,
+            source_url: metadata?.sourceURL || null,
+            result: generatedContent,
+          });
 
-          if (insertError) {
-            console.error("Insert error:", insertError);
-            send({ stage: "error", error: "Failed to save generated content" });
-            controller.close();
-            return;
-          }
+        if (insertError) {
+          console.error("Insert error:", insertError);
+          send({ stage: "error", error: "Failed to save generated content" });
+          controller.close();
+          return;
         }
 
         send({

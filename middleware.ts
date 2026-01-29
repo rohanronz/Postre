@@ -34,18 +34,22 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
   const isProtectedRoute = pathname.startsWith("/app") || pathname.startsWith("/history");
-  const isDemo = request.cookies.get("postre_demo")?.value === "1";
 
-  // Allow /login and /signup to be visited even when logged in or in demo mode
-  if (isDemo && isProtectedRoute) return response;
   if (!user && isProtectedRoute) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(redirectUrl);
   }
-  if (user && isProtectedRoute) return response;
+
+  if (user && isAuthRoute) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/app";
+    redirectUrl.search = "";
+    return NextResponse.redirect(redirectUrl);
+  }
 
   return response;
 }

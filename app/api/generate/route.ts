@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { OpenRouter } from "@openrouter/sdk";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { getCookieMapFromRequest } from "@/lib/cookie-from-request";
-import { parseLLMJson } from "@/lib/parse-llm-json";
 
 const openRouter = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
@@ -76,12 +74,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cookieMap = getCookieMapFromRequest(request);
-    const isDemo =
-      request.cookies.get("postre_demo")?.value === "1" ||
-      cookieMap.get("postre_demo") === "1" ||
-      request.headers.get("X-Postre-Demo") === "1";
-
     const truncatedContent = truncateContent(content);
 
     const userPrompt = `Here is the content to repurpose:
@@ -100,17 +92,12 @@ Please generate engaging social media content for all platforms as specified. Re
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
       ],
-      responseFormat: { type: "json_object" },
+      response_format: { type: "json_object" },
       temperature: 0.7,
     });
 
-    const rawContent = completion.choices[0]?.message?.content;
-    const responseText =
-      typeof rawContent === "string"
-        ? rawContent
-        : Array.isArray(rawContent)
-          ? (rawContent.find((c) => c && typeof c === "object" && "text" in c) as { text?: string } | undefined)?.text ?? ""
-          : "";
+    const responseText = completion.choices[0]?.message?.content;
+
     if (!responseText) {
       return NextResponse.json(
         { error: "No response from AI" },
@@ -118,14 +105,12 @@ Please generate engaging social media content for all platforms as specified. Re
       );
     }
 
-    const generatedContent = parseLLMJson(responseText);
-
-    if (isDemo) {
-      return NextResponse.json({
-        success: true,
-        data: generatedContent,
-      });
+    // OpenRouter models may wrap JSON in markdown code blocks
+    let jsonStr = responseText.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
     }
+    const generatedContent = JSON.parse(jsonStr);
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -141,7 +126,7 @@ Please generate engaging social media content for all platforms as specified. Re
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         get(name) {
-          return request.cookies.get(name)?.value ?? cookieStore.get(name)?.value ?? cookieMap.get(name) ?? undefined;
+          return cookieStore.get(name)?.value;
         },
         set(name, value, options) {
           cookieStore.set({ name, value, ...options });
@@ -152,15 +137,10 @@ Please generate engaging social media content for all platforms as specified. Re
       },
     });
 
-    let user = (await supabase.auth.getUser()).data.user;
-    if (!user) {
-      const authHeader = request.headers.get("Authorization");
-      const token = authHeader?.replace(/^Bearer\s+/i, "").trim();
-      if (token) {
-        const { data } = await supabase.auth.getUser(token);
-        user = data.user;
-      }
-    }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },

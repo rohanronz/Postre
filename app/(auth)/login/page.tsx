@@ -36,15 +36,6 @@ function LoginPageContent() {
     router.replace(redirectTo);
   };
 
-  const handleDemoLogin = () => {
-    const isSecure = typeof window !== "undefined" && window.location?.protocol === "https:";
-    let cookie = "postre_demo=1; path=/; max-age=86400; SameSite=Lax";
-    if (isSecure) cookie += "; Secure";
-    document.cookie = cookie;
-    // Full page redirect so the new cookie is sent with the request (fixes deployment)
-    window.location.href = "/app";
-  };
-
   return (
     <div className="min-h-screen bg-white dark:bg-black relative overflow-hidden flex items-center justify-center px-4 py-16">
       <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400/20 rounded-full blur-[120px] mix-blend-multiply dark:bg-blue-900/20" />
@@ -121,19 +112,6 @@ function LoginPageContent() {
                 className="w-full rounded-xl bg-blue-600 text-white py-3 text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60 shadow-lg shadow-blue-600/25"
               >
                 {isLoading ? "Signing in..." : "Sign in"}
-              </button>
-
-              <div className="relative flex items-center justify-center">
-                <span className="bg-white dark:bg-gray-900 px-2 text-xs text-gray-500 dark:text-gray-400">or</span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleDemoLogin}
-                disabled={isLoading}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-transparent py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-60"
-              >
-                Login as demo user
               </button>
             </form>
 
