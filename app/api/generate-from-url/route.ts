@@ -115,9 +115,15 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = (await supabase.auth.getUser()).data.user;
+  if (!user) {
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace(/^Bearer\s+/i, "").trim();
+    if (token) {
+      const { data } = await supabase.auth.getUser(token);
+      user = data.user;
+    }
+  }
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

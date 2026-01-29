@@ -8,6 +8,7 @@ import URLForm from "@/components/app/URLForm";
 import ContentCard from "@/components/app/ContentCard";
 import LoadingSkeleton from "@/components/app/LoadingSkeleton";
 import LogoutButton from "@/components/auth/LogoutButton";
+import { createClient } from "@/lib/supabase/client";
 
 interface GeneratedContent {
   linkedin: string;
@@ -46,10 +47,16 @@ export default function AppClient() {
     setStep("scraping");
 
     try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
       const res = await fetch("/api/generate-from-url", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ url }),
       });
 
